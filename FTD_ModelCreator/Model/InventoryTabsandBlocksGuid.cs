@@ -9,6 +9,7 @@ namespace FTD_ModelCreator.Model
         public static readonly Guid Air = new Guid("447c40bc-8823-407e-a0e1-bf24a7b29a52");
         public static readonly Guid APSExceptBarrel = new Guid("776ef0f2-fc55-4c02-981f-141b33ce6a55");
         public static readonly Guid APSExceptBarrel_Clips = new Guid("00b9dfc4-ac8f-4fee-bbe0-a76aeeb75627");
+        public static readonly Guid APSExceptBarrel_Absorbers = new Guid("5bd210b0-2377-45c8-9287-ec607acbbe60");
         public static readonly Guid CRAMExceptBarrel = new Guid("8d2a776a-4779-4c8a-a2d0-c70b29d9acf3");
         public static readonly Guid Deco = new Guid("2b3b8e0b-c65c-42f8-a8be-7c81c7c0fac7");
         public static readonly Guid FuelEngine = new Guid("d7cd17a5-ca85-4437-a57b-029fb27c794b");
@@ -21,7 +22,6 @@ namespace FTD_ModelCreator.Model
         public static readonly Guid Resources = new Guid("101e2c3b-7661-46bd-8a18-43fda730d00b");
         public static readonly Guid SimpleWeapon = new Guid("d614f75d-7806-4529-bcad-96043d2c42c4");
         public static readonly Guid SteamEngine = new Guid("41f497f0-7f23-4d77-a204-d61644912d26");
-        //public static readonly Guid Blocks = new Guid("90f049c6-35d4-4a41-84d9-1b633564294f");
         public static readonly Guid Water = new Guid("bbfdeb6b-4be0-4981-946b-b52cfb515dab");
 
         public static readonly Guid APSBarrel_barrel1m = new Guid("08d6ef2c-d97e-4b40-a5e3-0485b945f88b");
@@ -44,9 +44,6 @@ namespace FTD_ModelCreator.Model
         public static readonly Guid APSBarrel_Heavybarrelend3m = new Guid("f49d4249-2995-4a81-b67c-6abbce092b8f");
         public static readonly Guid APSBarrel_Heavybarrelend4m = new Guid("3108f579-7c8e-44e5-8cd8-2fe107afb3ea");
 
-        //public static readonly Guid[] APS_barrels = new Guid[16] {APS_barrel1m,APS_barrel2m,APS_barrel3m,APS_barrel4m,APS_Heavybarrel1m,APS_Heavybarrel2m,APS_Heavybarrel3m,APS_Heavybarrel4m,
-        //APS_Heavybarrelend1m,APS_Heavybarrelend2m,APS_Heavybarrelend3m,APS_Heavybarrelend4m,APS_Heavybarrelstart1m,APS_Heavybarrelstart2m,APS_Heavybarrelstart3m,APS_Heavybarrelstart4m};
-
         public static readonly Guid CRAMBarrel_barrel = new Guid("543fd6c7-fcf3-4df0-a4b2-891a8574b434");
         public static readonly Guid CRAMBarrel_bombchute = new Guid("ce494e45-5ff6-48a7-8936-30163c58ed99");
         public static readonly Guid CRAMBarrel_elevationbarrel = new Guid("bc292fe3-2330-4a01-8615-412a19fd7f6d");
@@ -54,15 +51,11 @@ namespace FTD_ModelCreator.Model
         public static readonly Guid CRAMBarrel_motordrivenbarrel = new Guid("54836777-b634-4a21-ab1e-2b0e426b640f");
         public static readonly Guid CRAMBarrel_recoilsuppressionbarrel = new Guid("9aa55699-b91d-4e4a-921a-4b60569824bf");
 
-        //public static readonly Guid[] Array_barrels = new Guid[6] { CRAM_barrel, CRAM_bombchute, CRAM_elevationbarrel, CRAM_heavybarrel, CRAM_motordrivenbarrel, CRAM_recoilsuppressionbarrel };
-
         public static readonly Guid LaserOptics_optics = new Guid("464187d2-ff5c-4d42-9937-0206cffbd883");
         public static readonly Guid LaserOptics_steeringoptics = new Guid("8996b3c3-2569-473e-9d28-2b2cb17bc7a3");
         public static readonly Guid LaserOptics_Armoredoptics = new Guid("575187d2-ff5c-4d42-9937-0206cffbd883");
         public static readonly Guid LaserOptics_Armoredsteeringoptics = new Guid("9aa6b3c3-2569-473e-9d28-2b2cb17bc7a3");
         public static readonly Guid LaserOptics_shortrange = new Guid("fd2b6afb-da6f-4a8e-bfc0-e4202b87300d");
-
-        //public static readonly Guid[] Array_opticses = new Guid[5] { Laser_Armoredoptics, Laser_steeringoptics, Laser_optics, Laser_shortrange, Laser_Armoredsteeringoptics };
 
         public static readonly Guid PACLens_PACrear = new Guid("2eea241a-6a32-41c6-a9e4-d082c7e854de");
         public static readonly Guid PACLens_PACsym = new Guid("9896747c-39a5-43bc-8ba9-ccf2f645cca1");
@@ -73,14 +66,10 @@ namespace FTD_ModelCreator.Model
         public static readonly Guid PACLens_Cannon = new Guid("3d82f1a3-ad2a-4e81-a4e3-cb88c968f6e9");
         public static readonly Guid PACLens_Short = new Guid("f1746662-adec-4054-98bd-94b553bc6c6d");
 
-        //public static readonly Guid[] Array_Lenses = new Guid[8] { PAC_PACrear, PAC_PACsym, PAC_Smallcross, PAC_Smallrear, PAC_Melee, PAC_Cannon, PAC_Cannonmirror, PAC_Short };
-
         public static readonly Guid Blocks_AlloyTransitions = new Guid("c099b76c-f011-4c87-ad8e-20c968c1eb76");
         public static readonly Guid Blocks_Alloy = new Guid("3cc75979-18ac-46c4-9a5b-25b327d99410");
         public static readonly Guid Blocks_MetalTransitions = new Guid("8ae14459-075e-4384-bd95-1fef61b4021f");
         public static readonly Guid Blocks_Metal = new Guid("ab699540-efc8-4592-bc97-204f6a874b3a");
-        //public static readonly Guid Blocks_RWoodTransitions = new Guid("c099b76c-f011-4c87-ad8e-20c968c1eb76");
-        //public static readonly Guid Blocks_RWood = new Guid("3cc75979-18ac-46c4-9a5b-25b327d99410");
         public static readonly Guid Blocks_WoodTransitions = new Guid("e44c6776-5dac-42a7-b192-8ede0c18203a");
         public static readonly Guid Blocks_Wood = new Guid("9a0ae372-beb4-4009-b14e-36ed0715af73");
         public static readonly Guid Blocks_HATransitions = new Guid("e2fb4854-f848-48a1-a850-7512116a19b9");
@@ -134,8 +123,6 @@ namespace FTD_ModelCreator.Model
         public static readonly Guid SteamEngine_LargeAxisshiftinggear = new Guid("aac4a0a5-9ff4-489d-a119-ea1b6e56ea87");
 
         public static readonly Guid SimpleWeapon_Drill = new Guid("eadfab64-b2a7-4704-8241-37ae3b42f705");
-
-        //public static readonly Guid APSBarrel_Barrel = new Guid("08d6ef2c-d97e-4b40-a5e3-0485b945f88b");
 
         public static readonly Guid Missile_S = new Guid("1b9aa074-9b04-4b5c-b30e-35bdfa0e0835");
         public static readonly Guid Missile_M = new Guid("bfb82ee6-345a-44a4-84e1-d6706cc8b29d");

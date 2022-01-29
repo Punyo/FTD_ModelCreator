@@ -9,7 +9,6 @@ using System.Linq;
 using UnityEngine;
 using System.Diagnostics;
 using BrilliantSkies.Common.Controls;
-
 namespace FTD_ModelCreator.Model
 {
     class ModelCreator
@@ -21,6 +20,8 @@ namespace FTD_ModelCreator.Model
         private readonly string name;
         private readonly int instanceid;
         private static Stopwatch stopwatch = new Stopwatch();
+        public static readonly uint maxreducescale = 20;
+        public static readonly uint minreducescale = 10;
 
         public bool excludeAITabBlocks = false;
         public bool excludeDefenceTabBlocks = false;
@@ -67,17 +68,17 @@ namespace FTD_ModelCreator.Model
         ///     ModelCreatorのインスタンスを取得
         /// </summary>
         /// <param name="vehiclename">ビークル名</param>
-        /// <param name="mainconstructinstanceID">インスタンスID(メインコンストラクト)</param>
+        /// <param name="mainconstructuniqueID">インスタンスID(メインコンストラクト)</param>
         /// <returns></returns>
-        public static ModelCreator GetModelCreator(string vehiclename, int mainconstructinstanceID)
+        public static ModelCreator GetModelCreator(string vehiclename, int mainconstructuniqueID)
         {
-            if (instances.Exists((vehicles) => { return vehicles.name == vehiclename && vehicles.instanceid == mainconstructinstanceID; }))
+            if (instances.Exists((vehicles) => { return vehicles.name == vehiclename && vehicles.instanceid == mainconstructuniqueID; }))
             {
                 return instances.Find((vehicles) => { return vehicles.name == vehiclename; });
             }
-            ModelCreator newinstance = new ModelCreator(vehiclename, mainconstructinstanceID);
+            ModelCreator newinstance = new ModelCreator(vehiclename, mainconstructuniqueID);
             instances.Add(newinstance);
-            AdvLogger.LogEvent($"Created ModelCreator instance for {vehiclename} InstanceID:{mainconstructinstanceID}");
+            AdvLogger.LogEvent($"Created ModelCreator instance for {vehiclename} InstanceID:{mainconstructuniqueID}");
             newinstance.ReducedScale = 10;
             return newinstance;
         }
@@ -104,7 +105,7 @@ namespace FTD_ModelCreator.Model
         //2:AllBasicsRestricted.GetSubConstructableViaLocalPositionでSubConstructsを取得
         public void Create(AllConstruct construct)
         {
-            stopwatch.Start();
+            stopwatch.Restart();
             List<Block> blocks = construct.Main.AllBasics.AliveAndDead.Blocks.FindAll((a) => { return a.Name.IndexOf("invisible") == -1; });
             List<Decoration> originaldecorations = (List<Decoration>)construct.Main.Decorations.DecorationList;
             ExcludeBlocks(ref blocks);
@@ -115,139 +116,197 @@ namespace FTD_ModelCreator.Model
                 return;
             }
             int tetherblockcount = -1;
-            int yoffset = -1;
+            int zshift = -1;
             Decoration[] downsizeddecorations = new Decoration[originaldecorations.Count];
             Decoration[] downsizedblockdecorations = new Decoration[blocks.Count];
             for (int i = 0; i < blocks.Count; i++)
             {
-                Mimic mimic = blocks[i] as Mimic;
-                OffsetThetherPoint(ref tetherblockcount, ref yoffset, i);
-                Vector3 thether = Vector3i.right * (tetherblockcount - 10 * yoffset) + Vector3i.down * yoffset;
-                if (mimic != null)
+                if (blocks[i] != null)
                 {
-                    AddDeco(construct, SetUpDecoration(construct.Main, spanwner.LocalPosition, mimic.Data.MeshGuid, mimic.Data.Scaling, mimic.color, blocks[i].LocalPosition + mimic.Data.Positioning.Us
-         , mimic.Data.Orientation, thether, thether));
-                }
-                else
-                {
-                    AddDeco(construct, SetUpDecoration(construct.Main, spanwner.LocalPosition, blocks[i].item.ComponentId.Guid, new Vector3(1, 1, 1), blocks[i].color, blocks[i].LocalPosition,
-                        blocks[i].LocalRotation.eulerAngles, thether, thether));
+                    Mimic mimic = blocks[i] as Mimic;
+                    ShiftThetherPoint(ref tetherblockcount, ref zshift, i);
+                    Vector3 thether = GetThetherPoint(tetherblockcount, zshift);
+                    if (mimic != null)
+                    {
+                        //           AddDeco(construct, SetUpDecoration(construct.Main, spanwner.LocalPosition, mimic.Data.MeshGuid, mimic.Data.Scaling, mimic.color, blocks[i].LocalPosition + mimic.Data.Positioning.Us
+                        //, mimic.Data.Orientation.Us + blocks[i].LocalRotation.eulerAngles, thether, thether));
+                    }
+                    else
+                    {
+                        AddDeco(construct, SetUpDecoration(construct.Main, spanwner.LocalPosition, blocks[i].item.ComponentId.Guid, new Vector3(1, 1, 1), blocks[i].color, blocks[i].LocalPosition,
+                            blocks[i].LocalRotation.eulerAngles, thether, thether));
+                    }
+
                 }
             }
             for (int i = 0; i < downsizeddecorations.Length; i++)
             {
-                Vector3 thether = Vector3i.right * (tetherblockcount - 10 * yoffset) + Vector3i.down * yoffset;
-                OffsetThetherPoint(ref tetherblockcount, ref yoffset, i);
+                Vector3 thether = GetThetherPoint(tetherblockcount, zshift);
+                ShiftThetherPoint(ref tetherblockcount, ref zshift, i);
                 AddDeco(construct, SetUpDecoration(construct.Main, spanwner.LocalPosition, originaldecorations[i].TetherPoint.Us, originaldecorations[i], thether, thether));
             }
-            PrecisionSpinBlock spinBlock = null;
-            Turret360Precision turret = null;
-            Vector3 forward = Vector3.zero;
-            float azimuth = 0;
-            float elevation = 0;
             foreach (var item in construct.AllBasicsRestricted.SubConstructList)
             {
-                List<Block> subblocks = item.AllBasicsRestricted.AliveAndDead.Blocks.FindAll((a) => { return a.Name.IndexOf("invisible") == -1; });
-                List<Decoration> suboriginaldecorations = (List<Decoration>)item.Decorations.DecorationList;
-                ExcludeBlocks(ref subblocks);
-                enumSpinBlockMode mode = enumSpinBlockMode.continuous;
-                for (int i = 0; i < subblocks.Count; i++)
-                {
-                    spinBlock = subblocks[i] as PrecisionSpinBlock;
-                    turret = subblocks[i] as Turret360Precision;
-                    if (subblocks[i].LocalPosition == Vector3.zero)
-                    {
-                        if (spinBlock != null)
-                        {
-                            if (spinBlock.Overlap.CurrentAzimuth <= 180)
-                            {
-                                azimuth = spinBlock.Overlap.CurrentAzimuth;
-                                elevation = 0;
-                            }
-                            else
-                            {
-                                azimuth = spinBlock.Overlap.CurrentAzimuth - 360;
-                                elevation = 0;
-                            }
-                            mode = spinBlock.P.Mode.Us;
-                            forward = spinBlock.LocalForwardInMainConstruct;
-                            subblocks[i] = subblocks[0];
-                            subblocks[0] = spinBlock;
-                        }
-                        if (turret != null)
-                        {
-                            if (turret.overlap.CurrentAzimuth <= 180)
-                            {
-                                azimuth = turret.overlap.CurrentAzimuth;
-                                elevation = turret.overlap.CurrentElevation;
-                            }
-                            else
-                            {
-                                azimuth = turret.overlap.CurrentAzimuth - 360;
-                                elevation = turret.overlap.CurrentElevation - 360;
-                            }
-                            forward = turret.LocalForwardInMainConstruct;
-                            subblocks[i] = subblocks[0];
-                            subblocks[0] = turret;
-                        }
-                        break;
-                    }
-                }
-                AdvLogger.LogInfo(subblocks.Count + "Safeup" + item.orientation + "LocalRotation" + azimuth + "AZ " + elevation + "EL");
-                for (int i = 0; i < subblocks.Count; i++)
-                {
-                    Vector3 thether = Vector3i.right * (tetherblockcount - 10 * yoffset) + Vector3i.down * yoffset;
-                    Decoration deco = SetUpDecoration(construct.Main, spanwner.LocalPosition, subblocks[i].item.ComponentId.Guid, new Vector3(1, 1, 1), subblocks[i].color, subblocks[i].LocalPositionInMainConstruct,
-                        subblocks[i].LocalRotation.eulerAngles, thether, thether);
-                    AdvLogger.LogInfo(item.RootLocalRotation.eulerAngles + "RootLocalRotation" + subblocks[i].LocalRotation.eulerAngles + "LocalRotation" + item.SafeLocalRotation.eulerAngles + "SafeRotation" + azimuth + "AZ " + elevation + "EL");
-                    if (item.orientation == Orientations.Up || item.orientation == Orientations.Down)
-                    {
-                        deco.Orientation.Us += new Vector3(elevation, azimuth + item.RootLocalRotation.eulerAngles.y, 0);
-                    }
-                    if (item.orientation == Orientations.Left || item.orientation == Orientations.Right)
-                    {
-                        if (item.orientation == Orientations.Left)
-                        {
-                            deco.Orientation.Us -= new Vector3(azimuth, elevation, 0);
-                            deco.Orientation.Us += new Vector3(0, 0, 90);
-                        }
-                        else
-                        {
-                            deco.Orientation.Us -= new Vector3(-azimuth, elevation, 0);
-                            deco.Orientation.Us -= new Vector3(0, 0, 90);
-                        }
-                    }
-                    if (item.orientation == Orientations.Forwards || item.orientation == Orientations.Backwards)
-                    {
-                        if (item.orientation == Orientations.Forwards)
-                        {
-                            deco.Orientation.Us -= new Vector3(0, -elevation, azimuth);
-                            deco.Orientation.Us += new Vector3(0, 90, 0);
-                        }
-                        else
-                        {
-                            deco.Orientation.Us -= new Vector3(0, elevation, -azimuth);
-                            deco.Orientation.Us -= new Vector3(0, 90, 0);
-                        }
-                    }
-                    AddDeco(construct, deco);
-                    OffsetThetherPoint(ref tetherblockcount, ref yoffset, i);
-                }
-                for (int i = 0; i < suboriginaldecorations.Count; i++)
-                {
-                    Vector3 thether = Vector3i.right * (tetherblockcount - 10 * yoffset) + Vector3i.down * yoffset;
-                    OffsetThetherPoint(ref tetherblockcount, ref yoffset, i);
-                    Decoration decoration = SetUpDecoration(construct.Main, spanwner.LocalPosition, suboriginaldecorations[i].TetherPoint.Us, suboriginaldecorations[i], thether, thether);
-                    if (subblocks[0].LocalUp.y != 0)
-                    {
-                        decoration.Orientation.Us += new Vector3(elevation, azimuth, 0);
-                    }
-                    AddDeco(construct, decoration);
-                }
-                //AdvLogger.LogInfo(spinBlock.LocalForward.ToString() + spinBlock.LocalForwardInMainConstruct.ToString());
+                CreationProcessinSubConstruct(construct.Main, spanwner, ref tetherblockcount, ref zshift, item);
             }
             stopwatch.Stop();
             AdvLogger.LogEvent($"Converted. Time:{stopwatch.ElapsedMilliseconds}[ms]({stopwatch.Elapsed.TotalSeconds}[s])");
+        }
+
+        private static Vector3i GetThetherPoint(int tetherblockcount, int zshift)
+        {
+            return Vector3i.back * (tetherblockcount - 10 * zshift) + Vector3i.down * zshift;
+        }
+
+        private void CreationProcessinSubConstruct(MainConstruct construct, Block spanwner, ref int tetherblockcount, ref int zshift, SubConstruct item)
+        {
+            PrecisionSpinBlock spinBlock = null;
+            Turret360Precision turret = null;
+            float azimuth = 0;
+            float elevation = 0;
+            List<Block> subblocks = item.AllBasicsRestricted.AliveAndDead.Blocks.FindAll((a) => { return a.Name.IndexOf("invisible") == -1; });
+            List<Decoration> suboriginaldecorations = (List<Decoration>)item.Decorations.DecorationList;
+            ExcludeBlocks(ref subblocks);
+            enumSpinBlockMode mode = enumSpinBlockMode.continuous;
+            for (int i = 0; i < subblocks.Count; i++)
+            {
+                spinBlock = subblocks[i] as PrecisionSpinBlock;
+                turret = subblocks[i] as Turret360Precision;
+                if (subblocks[i].LocalPosition == Vector3.zero)
+                {
+                    if (spinBlock != null)
+                    {
+                        if (spinBlock.Overlap.CurrentAzimuth <= 180)
+                        {
+                            azimuth = spinBlock.Overlap.CurrentAzimuth;
+                            elevation = 0;
+                        }
+                        else
+                        {
+                            azimuth = spinBlock.Overlap.CurrentAzimuth - 360;
+                            elevation = 0;
+                        }
+                        mode = spinBlock.P.Mode.Us;
+                        subblocks[i] = subblocks[0];
+                        subblocks[0] = spinBlock;
+                    }
+                    if (turret != null)
+                    {
+                        if (turret.overlap.CurrentAzimuth <= 180)
+                        {
+                            azimuth = turret.overlap.CurrentAzimuth;
+                            elevation = -turret.overlap.CurrentElevation;
+                        }
+                        else
+                        {
+                            azimuth = turret.overlap.CurrentAzimuth - 360;
+                            elevation = turret.overlap.CurrentElevation - 360;
+                        }
+                        subblocks[i] = subblocks[0];
+                        subblocks[0] = turret;
+                    }
+                    break;
+                }
+            }
+            AdvLogger.LogInfo(subblocks.Count + "Safeup" + item.orientation + "LocalRotation" + azimuth + "AZ " + elevation + "EL");
+            for (int i = 0; i < subblocks.Count; i++)
+            {
+                Vector3 thether = GetThetherPoint(tetherblockcount, zshift);
+                Decoration deco = SetUpDecoration(construct, spanwner.LocalPosition, subblocks[i].item.ComponentId.Guid, new Vector3(1, 1, 1), subblocks[i].color, subblocks[i].LocalPositionInMainConstruct,
+                    subblocks[i].LocalRotation.eulerAngles, thether, thether);
+                AdvLogger.LogInfo(item.RootLocalRotation.eulerAngles + "RootLocalRotation" + subblocks[i].LocalRotation.eulerAngles + "LocalRotation" + item.SafeLocalRotation.eulerAngles + "SafeRotation" + azimuth + "AZ " + elevation + "EL");
+                RotateForAzimuthandElevation(item, azimuth, elevation, subblocks[i], deco);
+                AddDeco(construct, deco);
+                ShiftThetherPoint(ref tetherblockcount, ref zshift, i);
+            }
+            //for (int i = 0; i < suboriginaldecorations.Count; i++)
+            //{
+            //    Vector3 thether = GetThetherPoint(tetherblockcount, zshift);
+            //    ShiftThetherPoint(ref tetherblockcount, ref zshift, i);
+            //    Decoration decoration = SetUpDecorationForConvertDecoOnSub(construct.Main, item, spanwner.LocalPosition, suboriginaldecorations[i], thether, thether, azimuth);
+            //    RotateForAzimuthandElevation(item, azimuth, elevation, decoration, suboriginaldecorations[i]);
+            //    AddDeco(construct, decoration);
+            //}
+            foreach (var childsubconstruct in item.AllBasicsRestricted.SubConstructList)
+            {
+                CreationProcessinSubConstruct(construct, spanwner, ref tetherblockcount, ref zshift, childsubconstruct);
+            }
+        }
+
+        private static void RotateForAzimuthandElevation(SubConstruct item, float azimuth, float elevation, Decoration deco, Decoration originaldeco)
+        {
+            Block tetherpointblock = null;
+            originaldeco.GetBlock(out tetherpointblock);
+            if (item.orientation == Orientations.Up)
+            {
+                ProcessForUpandDown(item, azimuth, elevation, deco, (uint)(tetherpointblock.LocalRotation.eulerAngles.y + originaldeco.Orientation.y), (uint)(tetherpointblock.LocalRotation.eulerAngles.x + originaldeco.Orientation.x));
+            }
+        }
+        private static void RotateForAzimuthandElevation(SubConstruct item, float azimuth, float elevation, Block subblocks, Decoration deco)
+        {
+            if (item.orientation == Orientations.Up /*|| item.orientation == Orientations.Down*/)
+            {
+                ProcessForUpandDown(item, azimuth, elevation, deco, (uint)subblocks.LocalRotation.eulerAngles.y, (uint)subblocks.LocalRotation.eulerAngles.x);
+            }
+        }
+
+        private static void ProcessForUpandDown(SubConstruct item, float azimuth, float elevation, Decoration deco, uint yaxislocalrotaion, uint xaxislocalrotation)
+        {
+            if (yaxislocalrotaion <= 45)
+            {
+                deco.Orientation.Us += new Vector3(-elevation, azimuth + item.RootLocalRotation.eulerAngles.y, 0);
+            }
+            else if (yaxislocalrotaion <= 135)
+            {
+                deco.Orientation.Us += new Vector3(-deco.Orientation.Us.x, azimuth + item.RootLocalRotation.eulerAngles.y, -elevation);
+                if (xaxislocalrotation == 270)
+                {
+                    deco.Orientation.Us -= new Vector3(90, 0, 0);
+                }
+            }
+            else if (yaxislocalrotaion <= 225)
+            {
+                deco.Orientation.Us += new Vector3(elevation, azimuth + item.RootLocalRotation.eulerAngles.y, 0);
+            }
+            else
+            {
+                deco.Orientation.Us += new Vector3(-deco.Orientation.Us.x, azimuth + item.RootLocalRotation.eulerAngles.y, elevation);
+                if (xaxislocalrotation == 270)
+                {
+                    deco.Orientation.Us -= new Vector3(90, 0, 0);
+                }
+            }
+            //switch (subblocks.LocalRotation.eulerAngles.y)
+            //{
+            //    case 0:
+            //        {
+            //            deco.Orientation.Us += new Vector3(-elevation, azimuth + item.RootLocalRotation.eulerAngles.y, 0);
+            //        }
+            //        break;
+            //    case 90:
+            //        {
+            //            deco.Orientation.Us += new Vector3(-deco.Orientation.Us.x, azimuth + item.RootLocalRotation.eulerAngles.y, -elevation);
+            //            if (subblocks.LocalRotation.eulerAngles.x == 270)
+            //            {
+            //                deco.Orientation.Us -= new Vector3(90, 0, 0);
+            //            }
+            //        }
+            //        break;
+            //    case 270:
+            //        {
+            //            deco.Orientation.Us += new Vector3(-deco.Orientation.Us.x, azimuth + item.RootLocalRotation.eulerAngles.y, elevation);
+            //            if (subblocks.LocalRotation.eulerAngles.x == 270)
+            //            {
+            //                deco.Orientation.Us -= new Vector3(90, 0, 0);
+            //            }
+            //        }
+            //        break;
+            //    case 180:
+            //        {
+            //            deco.Orientation.Us += new Vector3(elevation, azimuth + item.RootLocalRotation.eulerAngles.y, 0);
+            //        }
+            //        break;
+            //}
         }
 
         public int CalculateDownsizedDecorationAmount(MainConstruct construct)
@@ -291,46 +350,69 @@ namespace FTD_ModelCreator.Model
         {
             Block block = null;
             deco.GetBlock(out block);
-            if (block?.Name == modelspawnblockname || block == null)
+            if (block?.Name != modelspawnblockname || block == null)
             {
                 MultiDecorationEditor b = construct.Main.Decorations.AddOrEditDecorations(deco);
                 b.DeactivateGui();
             }
         }
 
-        private static void OffsetThetherPoint(ref int tetherblockcount, ref int yoffset, int i)
+        private static void ShiftThetherPoint(ref int tetherblockcount, ref int yshift, int i)
         {
             if ((i % maxdecorationperblock == 0))
             {
                 tetherblockcount++;
                 if (tetherblockcount % 10 == 0)
                 {
-                    yoffset++;
+                    yshift++;
                 }
             }
         }
 
 
-        private Decoration SetUpDecoration(MainConstruct construct, Vector3 tetherpos, Guid meshguid, Vector3 scale, int color, Vector3 localpos, Vector3 localrotation, Vector3 thetheroffset, Vector3 posoffset)
+        private Decoration SetUpDecoration(MainConstruct construct, Vector3 tetherpos, Guid meshguid, Vector3 scale, int color, Vector3 localpos, Vector3 localrotation, Vector3 thethershift, Vector3 posshift)
         {
-            Decoration decoration = construct.Decorations.NewDecoration((Vector3i)(tetherpos + thetheroffset), true);
+            Decoration decoration = construct.Decorations.NewDecoration((Vector3i)(tetherpos + thethershift), true);
             decoration.MeshGuid.Us = meshguid;
             decoration.Color.Us = color;
-            decoration.Positioning.Us = OriginalVector3ToModelVector3(localpos - posoffset * ReducedScale);
+            decoration.Positioning.Us = OriginalVector3ToModelVector3(localpos - posshift * ReducedScale);
             decoration.Scaling.Us = OriginalVector3ToModelVector3(scale);
             decoration.Orientation.Us = localrotation;
             decoration.CallbackToChangeSyncroniser.WeHaveChanged(decoration);
             return decoration;
         }
-
-        private Decoration SetUpDecoration(MainConstruct construct, Vector3 tetherpos, Vector3 originallocalpos, Decoration deco, Vector3 thetheroffset, Vector3 posoffset)
+        //TODO:Atan(z/x)で角の大きさを求める
+        //加法定理を用いて+X[deg]した時の位置を求める
+        private Decoration SetUpDecoration(MainConstruct construct, Vector3 tetherpos, Vector3 originallocalpos, Decoration deco, Vector3 thethershift, Vector3 posshift)
         {
-            Decoration decoration = construct.Decorations.NewDecoration((Vector3i)(tetherpos + thetheroffset), true);
+            Decoration decoration = construct.Decorations.NewDecoration((Vector3i)(tetherpos + thethershift), true);
             decoration.MeshGuid.Us = deco.MeshGuid;
             decoration.Color.Us = deco.Color;
-            decoration.Positioning.Us = OriginalVector3ToModelVector3(originallocalpos + deco.Positioning.Us - posoffset * ReducedScale);
             decoration.Scaling.Us = OriginalVector3ToModelVector3(deco.Scaling);
             decoration.Orientation.Us = deco.Orientation.Us;
+            decoration.Positioning.Us = OriginalVector3ToModelVector3(originallocalpos + deco.Positioning.Us - posshift * ReducedScale);
+            decoration.CallbackToChangeSyncroniser.WeHaveChanged(decoration);
+            return decoration;
+        }
+        private Decoration SetUpDecorationForConvertDecoOnSub(MainConstruct construct, SubConstruct sub, Vector3 tetherpos, Decoration deco, Vector3 thethershift, Vector3 posshift, float azimuth)
+        {
+            Block block = null;
+            deco.GetBlock(out block);
+            //float azimuthrad = azimuth * Mathf.Deg2Rad;
+            Decoration decoration = construct.Decorations.NewDecoration((Vector3i)(tetherpos + thethershift), true);
+            //float z = decoration.Positioning.Us.z + block.LocalPosition.z;
+            //float x = decoration.Positioning.Us.x + block.LocalPosition.x;
+            //float decorad = Mathf.Atan2(z, x);
+            //float radius = Mathf.Sign(Mathf.Pow(z, 2) + Mathf.Pow(x, 2));
+            decoration.MeshGuid.Us = deco.MeshGuid;
+            decoration.Color.Us = deco.Color;
+            decoration.Scaling.Us = OriginalVector3ToModelVector3(deco.Scaling);
+            decoration.Orientation.Us = deco.Orientation.Us;
+
+            //Vector3 rotatedpos = new Vector3(radius * Mathf.Sin(decorad + azimuthrad), decoration.Positioning.y,
+            //    radius * Mathf.Cos(decorad + azimuthrad));
+            decoration.Positioning.Us = OriginalVector3ToModelVector3(sub.RootLocalPosition + deco.TetherPoint.Us + deco.Positioning.Us - posshift * ReducedScale);
+
             decoration.CallbackToChangeSyncroniser.WeHaveChanged(decoration);
             return decoration;
         }
@@ -414,6 +496,7 @@ namespace FTD_ModelCreator.Model
                 else
                 {
                     array.RemoveAt(i);
+                    array.Capacity--;
                 }
             }
         }

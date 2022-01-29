@@ -30,7 +30,7 @@ namespace FTD_ModelCreator.Core
                 InputType input = CaptureSimpilfyZone.DisplayButton();
                 if (input > InputType.None)
                 {
-                    ModelCreator creator = ModelCreator.GetModelCreator(build.C.Main.GetName(), build.C.Main.myTransform.gameObject.GetInstanceID());
+                    ModelCreator creator = ModelCreator.GetModelCreator(build.C.Main.GetName(), build.C.Main.UniqueId);
                     KeyValuePair<Vector3i, Vector3i> capturedpos = build.GetPrefabCaptureBox();
                     //List<int> indexes = new List<int>();
                     //List<string> indexesstring = new List<string>();

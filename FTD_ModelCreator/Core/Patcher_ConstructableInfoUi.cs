@@ -1,17 +1,12 @@
 ﻿using BrilliantSkies.Core.Constants;
-using BrilliantSkies.Core.Help;
 using BrilliantSkies.Core.Logger;
 using BrilliantSkies.Core.UiSounds;
-using BrilliantSkies.Core.Unity;
-using BrilliantSkies.Ftd.Avatar.Build;
-using BrilliantSkies.Ftd.Constructs.Modules.All.Decorations;
 using BrilliantSkies.Ftd.Constructs.UI;
-using BrilliantSkies.Ui.Consoles;
 using BrilliantSkies.Ui.Consoles.Getters;
-using BrilliantSkies.Ui.Consoles.Interpretters.Simple;
 using BrilliantSkies.Ui.Consoles.Interpretters.Subjective;
 using BrilliantSkies.Ui.Consoles.Interpretters.Subjective.Buttons;
 using BrilliantSkies.Ui.Consoles.Interpretters.Subjective.Choices;
+using BrilliantSkies.Ui.Consoles.Interpretters.Subjective.Numbers;
 using BrilliantSkies.Ui.Consoles.Interpretters.Subjective.Texts;
 using BrilliantSkies.Ui.Consoles.Segments;
 using BrilliantSkies.Ui.Consoles.Styles;
@@ -19,11 +14,6 @@ using BrilliantSkies.Ui.Examples.Log;
 using BrilliantSkies.Ui.Tips;
 using FTD_ModelCreator.Model;
 using HarmonyLib;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-//using System.Threading.Tasks;
 using UnityEngine;
 
 namespace FTD_ModelCreator.Core
@@ -34,14 +24,13 @@ namespace FTD_ModelCreator.Core
     {
         private static readonly string tabname = "Model";
         private static readonly string modelspawnblockname = "ModelSpawner";
-        private static TextInput<ConstructInfo> reducedscale;
         private static int currentdownsizeddecos;
         private static int currentremaindecos;
         //private static bool isoverride=false;
 
         static void Postfix(GeneralTab __instance)
         {
-            ModelCreator creator = ModelCreator.GetModelCreator(__instance._focus.Construct.Main.GetName(), __instance._focus.Construct.Main.myTransform.gameObject.GetInstanceID());
+            ModelCreator creator = ModelCreator.GetModelCreator(__instance._focus.Construct.Main.GetName(), __instance._focus.Construct.UniqueId);
             ScreenSegmentStandard segment = __instance.CreateStandardSegment();
             segment.NameWhereApplicable = tabname;
             segment.BackgroundStyleWhereApplicable = ConsoleStyles.Instance.Styles.Segments.OptionalSegmentDarkBackgroundWithHeader.Style;
@@ -58,26 +47,23 @@ namespace FTD_ModelCreator.Core
             {
                 horizontal.AddInterpretter(SubjectiveDisplay<ConstructInfo>.Quick(__instance._focus, M.m<ConstructInfo>((a) => { return "<color=red>We cannot convert it.</color>"; })));
             }
-            reducedscale = segment.AddInterpretter<TextInput<ConstructInfo>>(TextInput<ConstructInfo>.Quick(__instance._focus, M.m<ConstructInfo>("10"), "Reduce Scale", new ToolTip("Reduce scale"),
-                 (c, s) =>
-                 {
-                     uint parseduint = 10;
-                     if (!uint.TryParse(s, out parseduint))
-                     {
-                         GUISoundManager.GetSingleton().PlayFailure();
-                         creator.ReducedScale = 10;
-                     }
-                     else
-                     {
-                         creator.ReducedScale = parseduint;
-                     }
-                 }));
             segment.AddInterpretter<SubjectiveButton<ConstructInfo>>(SubjectiveButton<ConstructInfo>.Quick(__instance._focus, "Create Model", new ToolTip("Make model of this vehicle.You should take backup before excuting this."),
                 (construct) =>
                 {
-                    GUISoundManager.GetSingleton().PlaySuccess();
-                    ModelCreator.GetModelCreator(construct.Construct.GetName(), construct.Construct.myTransform.gameObject.GetInstanceID()).Create(construct.Construct);
+                    if (creator.CanConvert(__instance._focus.Construct))
+                    {
+                        GUISoundManager.GetSingleton().PlaySuccess();
+                        creator.Create(construct.Construct);
+                    }
+                    else
+                    {
+                        GUISoundManager.GetSingleton().PlayFailure();
+                    }
                 }));
+            segment.AddInterpretter<SubjectiveFloatClampedWithBar<ConstructInfo>>(new SubjectiveFloatClampedWithBar<ConstructInfo>(M.m<ConstructInfo>(0), M.m<ConstructInfo>(ModelCreator.maxreducescale),
+        M.m<ConstructInfo>((ConstructInfo a) => creator.ReducedScale), M.m<ConstructInfo>(0.1f), __instance._focus, M.m<ConstructInfo>("Reduced Scale"), (a, v) => { if (v >= ModelCreator.minreducescale) { creator.ReducedScale = (uint)v; } else { creator.ReducedScale = ModelCreator.minreducescale; } },
+        (a, b) => "Change Reduced Scale", M.m<ConstructInfo>(new ToolTip("Change Reduced Scale"))));
+#if DEBUG
             segment.AddInterpretter<SubjectiveButton<ConstructInfo>>(SubjectiveButton<ConstructInfo>.Quick(__instance._focus, "Open Log", new ToolTip("デバッグ用"),
                 (construct) =>
                 {
@@ -89,6 +75,8 @@ namespace FTD_ModelCreator.Core
                 {
                     Application.Quit();
                 }));
+#endif
+
             //segment.AddInterpretter<SubjectiveToggle<ModelCreator>>(SubjectiveToggle<ModelCreator>.Quick(creator, "Override Deco Limit", new ToolTip("Override Deco Limit"),
             //  (a, b) => { isoverride = b;if (isoverride) { AllConstructDecorations._limitPerPacketManager = 99999; } else { AllConstructDecorations._limitPerPacketManager = 5000; }; }, (a) => { return isoverride; }));
             ScreenSegmentTable table = __instance.CreateTableSegment(3, 10);
