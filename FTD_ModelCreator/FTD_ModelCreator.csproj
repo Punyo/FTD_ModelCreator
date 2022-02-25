@@ -79,7 +79,6 @@
   <ItemGroup>
     <Compile Include="Core\Entrypoint.cs" />
     <Compile Include="Core\Patcher_ConstructableInfoUi.cs" />
-    <Compile Include="Core\Patcher_HudBuildCommands.cs" />
     <Compile Include="Model\InventoryTabsandBlocksGuid.cs" />
     <Compile Include="Model\ModelCreator.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
